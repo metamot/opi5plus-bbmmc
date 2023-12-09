@@ -4,6 +4,9 @@
 # cd /opt/mysdk
 # make deps
 # make pkg
+# make
+# >> insert microsd
+# make write
 
 #UBOOT_DEFCONFIG=orangepi_5_defconfig
 #UBOOT_DEFCONFIG=orangepi_5b_defconfig
@@ -43,7 +46,7 @@ KERNAM=.my
 
 #echo | gcc -mcpu=cortex-a76.cortex-a55+crypto+sve -xc - -o - -S | grep arch
 
-all: pkg mmc
+all: deps pkg mmc
 
 
 clean: clean_uboot clean_linux
@@ -72,44 +75,15 @@ clean_pkg:
 deepclean: easyclean clean_pkg
 help:
 	@echo ""
-	@echo "make deps                      - Install Hosts-Dependencies"
-	@echo "WARNING: You need use 'make deps' only once BEFORE start!"
+	@echo 'make deps pkg                  - Install Hosts-Deps and Download packages'
+	@echo 'WARNING: You need use "make deps" and "make pkg" only once BEFORE start!'
 	@echo ""
-	@echo "make pkg                       - Create zst-Pakages only"
+	@echo 'make                           - Build "mmc.img" (witch make deps pkg mmc)'
 	@echo ""
-	@echo 'make getblk                    - Get Block_12M from MMC-device (default:mmcblk1)  :: to "pkg/blk_img.old"'
-	@echo 'make getblk MMC_DEV=mmcblk0    - Get Block_12M from specified MMC-device :: to "pkg/blk_img.old"'
-	@echo 'make getdvkr                   - After "make getblk" - Extract DVKR.bin("strange customer info)" from "blk_img.old"(see above)'
-	@echo ""
-	@echo "make uboot                     - STANDARD: make all"
-	@echo "make uboot BL31_FILE=bl31.elf  - EXPERIMENTAL: use bl31 from sources"
-	@echo ""
-	@echo 'Default config is "orangepi_5_plus_defconfig"'
-	@echo 'For other variants, please use "UBOOT_DEFCONFIG" variable as shown below:'
-	@echo ""
-	@echo "make uboot UBOOT_DEFCONFIG=orangepi_5_defconfig"
-	@echo "make uboot UBOOT_DEFCONFIG=orangepi_5_defconfig BL31_FILE=bl31.elf"
-	@echo "make uboot UBOOT_DEFCONFIG=orangepi_5b_defconfig"
-	@echo "make uboot UBOOT_DEFCONFIG=orangepi_5b_defconfig BL31_FILE=bl31.elf"
-	@echo "make uboot UBOOT_DEFCONFIG=orangepi_5_plus_defconfig"
-	@echo "make uboot UBOOT_DEFCONFIG=orangepi_5_plus_defconfig BL31_FILE=bl31.elf"
-	@echo ""
-	@echo "make putblk                    - Put Block_12M to MMC-device (default:mmcblk1)"
-	@echo "make putblk MMC_DEV=mmcblk0    - Put Block_12M to specified MMC-device"
-	@echo "WARNING: You need use 'make getblk' BEFORE 'make putblk'!"
-	@echo ""
-	@echo "make linux                     - Build Linux Kernel Out-Of-Src-Tree"
-	@echo ""
-	@echo "For verbose uboot build, pls use UVERB=1. For verbose kernel build, pls use KVERB=1. For example:"
-	@echo "make UVERB=1 KVERB=1"
-	@echo ""
-	@echo "For both (uboot and kernel) verbose, pls use VERB=1"
-	@echo "make VERB=1"
-	@echo ""
-	@echo "make clean                     - Delete builds"
-	@echo "make easyclean                 - Delete all except zst-packages"
-	@echo "make clean_pkg                 - Delete zst-packages only (You nee download it again!)"
-	@echo "make deepclean                 - Delete ALL (incl.zts-packages!)"
+	@echo 'make clean                     - Delete builds'
+	@echo 'make easyclean                 - Delete all except zst-packages'
+	@echo 'make clean_pkg                 - Delete zst-packages only (You nee download it again!)'
+	@echo 'make deepclean                 - Delete ALL (incl.zts-packages!)'
 	@echo ""
 # #############################################################################
 deps:
@@ -487,4 +461,3 @@ mmc: out/mmc.img
 
 write: out/mmc.img
 	sudo dd if=$< of=/dev/$(MMC_DEV) bs=1M && sudo sync
-
