@@ -4,7 +4,7 @@
 # cd /opt/mysdk
 # make deps
 # make pkg
-# make
+# make mmc
 # >> insert microsd
 # make write
 
@@ -33,6 +33,8 @@ VERB=0
 UVERB=$(VERB)
 # Kernel Verbose
 KVERB=$(VERB)
+# Busybox Verbose
+BVERB=$(VERB)
 
 # You can create logs if VERB=1 and redirect "1"(stdout) to file and "2"(stderr) to file, like this:
 # $ make VERB=1 1>1.txt 2>2.txt
@@ -78,12 +80,8 @@ help:
 	@echo 'make deps pkg                  - Install Hosts-Deps and Download packages'
 	@echo 'WARNING: You need use "make deps" and "make pkg" only once BEFORE start!'
 	@echo ""
-	@echo 'make                           - Build "mmc.img" (witch make deps pkg mmc)'
-	@echo ""
-	@echo 'make clean                     - Delete builds'
-	@echo 'make easyclean                 - Delete all except zst-packages'
-	@echo 'make clean_pkg                 - Delete zst-packages only (You nee download it again!)'
-	@echo 'make deepclean                 - Delete ALL (incl.zts-packages!)'
+	@echo 'make mmc                       - Build "mmc.img"'
+	@echo 'make write                     - Write "mmc.img" to /dev/mmcblk1'
 	@echo ""
 # #############################################################################
 deps:
@@ -376,7 +374,7 @@ parts/busybox/bld/.config: cfg/$(BUSYBOX_CONFIG) parts/busybox/src/Makefile
 	cp -far $< parts/busybox/bld/.config && touch $@
 
 parts/busybox/bld/busybox: parts/busybox/bld/.config
-	cd parts/busybox/bld && make $(JOBS) KBUILD_SRC=../src -f ../src/Makefile
+	cd parts/busybox/bld && make $(JOBS) V=$(BVERB) CFLAGS="-Os -mcpu=cortex-a76.cortex-a55+crypto+sve" KBUILD_SRC=../src -f ../src/Makefile
 
 out/rd/abin/busybox: parts/busybox/bld/busybox
 	mkdir -p out/rd/abin
@@ -386,7 +384,7 @@ out/rd/init: out/rd/abin/busybox
 	cd out/rd && ln -sf /abin/busybox init
 
 out/rd/abin/login: out/rd/init
-	cd out/rd/abin && ln -sf busybox login && ln -sf busybox poweroff && ln -sf busybox reboot && ln -sf busybox getty && ln -sf busybox sh && ln -sf busybox cat && ln -sf busybox mount && ln -sf busybox echo && ln -sf busybox mkdir
+	cd out/rd/abin && ln -sf busybox login && ln -sf busybox poweroff && ln -sf busybox reboot && ln -sf busybox getty && ln -sf busybox sh && ln -sf busybox ash && ln -sf busybox cat && ln -sf busybox mount && ln -sf busybox echo && ln -sf busybox mkdir && ln -sf busybox passwd && ln -sf busybox false && ln -sf busybox sync && ln -sf busybox ls && ln -sf busybox who && ln -sf busybox whoami
 
 out/rd/aetc/inittab: out/rd/abin/login
 	mkdir -p out/rd/aetc/init.d
@@ -426,7 +424,58 @@ out/rd/aetc/inittab: out/rd/abin/login
 	chmod ugo+x out/rd/aetc/init.d/rcS
 #
 	echo "Busybox OPI5+" > out/rd/aetc/issue
-
+#
+	echo 'export PATH="/abin"' > out/rd/aetc/profile
+#
+	echo "/abin/ash" > out/rd/aetc/shells
+	echo "/abin/sh" >> out/rd/aetc/shells
+#
+	echo "root:x:0:" > out/rd/aetc/group
+	echo "daemon:x:1:" >> out/rd/aetc/group
+	echo "bin:x:2:" >> out/rd/aetc/group
+	echo "sys:x:3:" >> out/rd/aetc/group
+	echo "adm:x:4:" >> out/rd/aetc/group
+	echo "tty:x:5:" >> out/rd/aetc/group
+	echo "disk:x:6:" >> out/rd/aetc/group
+	echo "lp:x:7:" >> out/rd/aetc/group
+	echo "mail:x:8:" >> out/rd/aetc/group
+	echo "kmem:x:9:" >> out/rd/aetc/group
+	echo "wheel:x:10:root" >> out/rd/aetc/group
+	echo "cdrom:x:11:" >> out/rd/aetc/group
+	echo "dialout:x:18:" >> out/rd/aetc/group
+	echo "floppy:x:19:" >> out/rd/aetc/group
+	echo "video:x:28:" >> out/rd/aetc/group
+	echo "audio:x:29:" >> out/rd/aetc/group
+	echo "tape:x:32:" >> out/rd/aetc/group
+	echo "www-data:x:33:" >> out/rd/aetc/group
+	echo "operator:x:37:" >> out/rd/aetc/group
+	echo "utmp:x:43:" >> out/rd/aetc/group
+	echo "plugdev:x:46:" >> out/rd/aetc/group
+	echo "staff:x:50:" >> out/rd/aetc/group
+	echo "lock:x:54:" >> out/rd/aetc/group
+	echo "netdev:x:82:" >> out/rd/aetc/group
+	echo "users:x:100:" >> out/rd/aetc/group
+	echo "nobody:x:65534:" >> out/rd/aetc/group
+#
+	echo "root::0:0:root:/root:/abin/sh" > out/rd/aetc/passwd
+#	echo "daemon:x:1:1:daemon:/usr/sbin:/bin/false" >> out/rd/aetc/passwd
+	echo "bin:x:2:2:bin:/abin:/abin/false" >> out/rd/aetc/passwd
+	echo "sys:x:3:3:sys:/dev:/abin/false" >> out/rd/aetc/passwd
+	echo "sync:x:4:100:sync:/abin:/abin/sync" >> out/rd/aetc/passwd
+#	echo "mail:x:8:8:mail:/var/spool/mail:/bin/false" >> out/rd/aetc/passwd
+#	echo "www-data:x:33:33:www-data:/var/www:/bin/false" >> out/rd/aetc/passwd
+#	echo "operator:x:37:37:Operator:/var:/bin/false" >> out/rd/aetc/passwd
+	echo "nobody:x:65534:65534:nobody:/home:/abin/false" >> out/rd/aetc/passwd
+#
+	echo "root::19701::::::" > out/rd/aetc/shadow
+	echo "daemon:*:::::::" >> out/rd/aetc/shadow
+	echo "bin:*:::::::" >> out/rd/aetc/shadow
+	echo "sys:*:::::::" >> out/rd/aetc/shadow
+	echo "sync:*:::::::" >> out/rd/aetc/shadow
+	echo "mail:*:::::::" >> out/rd/aetc/shadow
+	echo "www-data:*:::::::" >> out/rd/aetc/shadow
+	echo "operator:*:::::::" >> out/rd/aetc/shadow
+	echo "nobody:*:::::::" >> out/rd/aetc/shadow
 
 out/fat/uInitrd: out/rd/aetc/inittab
 	mkdir -p out/fat
