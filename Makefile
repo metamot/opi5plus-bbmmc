@@ -8,10 +8,34 @@
 # >> insert microsd
 # make write
 
-#UBOOT_DEFCONFIG=orangepi_5_defconfig
-#UBOOT_DEFCONFIG=orangepi_5b_defconfig
-#UBOOT_DEFCONFIG=orangepi_5_plus_defconfig
+# Add sync for ESD-touch when Opi5 imidiately shutdown from ESD-touch
+# SYNC=
+SYNC=sync
+
+#Verbose - default minimal (=0) , set VERB=1 to lots of verbose
+VERB=0
+# Uboot Verbose
+UVERB=$(VERB)
+# Kernel Verbose
+KVERB=$(VERB)
+# Busybox Verbose
+BVERB=$(VERB)
+# You can create logs if VERB=1 and redirect "1"(stdout) to file and "2"(stderr) to file, like this:
+# $ make VERB=1 1>1.txt 2>2.txt
+# see 1.txt and 2.txt for more info
+
+# BRD=opi5
+BRD=opi5plus
+
+ifeq ($(BRD),opi5)
+UBOOT_DEFCONFIG=uboot_opi5_my_defconfig
+else
+ifeq ($(BRD),opi5plus)
 UBOOT_DEFCONFIG=uboot_opi5plus_my_defconfig
+else
+$(error BRD is not set as BRD=opi5 or BRD=opi5plus)
+endif
+endif
 
 #BL31_FILE=rk3588_bl31_v1.28.elf
 BL31_FILE=bl31.elf
@@ -27,29 +51,11 @@ JOBS=-j12
 # Default mmc-device (if emmc present then mmcblk0=emmc, mmcblk1=microsd, in other cases mmcblk0=microsd)
 MMC_DEV=mmcblk1
 
-#Verbose - default minimal (=0) , set VERB=1 to lot of verbose
-VERB=0
-# Uboot Verbose
-UVERB=$(VERB)
-# Kernel Verbose
-KVERB=$(VERB)
-# Busybox Verbose
-BVERB=$(VERB)
-
-# You can create logs if VERB=1 and redirect "1"(stdout) to file and "2"(stderr) to file, like this:
-# $ make VERB=1 1>1.txt 2>2.txt
-# see 1.txt and 2.txt for more info
-
-# Add sync for ESD-touch when Opi5 imidiately shutdown from ESD-touch
-#SYNC=
-SYNC=sync
-
 KERNAM=.my
 
 #echo | gcc -mcpu=cortex-a76.cortex-a55+crypto+sve -xc - -o - -S | grep arch
 
 all: deps pkg mmc
-
 
 clean: clean_uboot clean_linux
 	rm -fr tmp
@@ -77,12 +83,18 @@ clean_pkg:
 deepclean: easyclean clean_pkg
 help:
 	@echo ""
-	@echo 'make deps pkg                  - Install Hosts-Deps and Download packages'
-	@echo 'WARNING: You need use "make deps" and "make pkg" only once BEFORE start!'
+	@echo "BRD=$(BRD), UbootCfg=$(UBOOT_DEFCONFIG), jobs=$(JOBS), verbose=$(VERB)"
+	@echo ""
+	@echo 'make deps                      - Install Hosts-Deps (sudo required)'
+	@echo 'make pkg                       - Download all packages before build'
+	@echo 'WARNING: You need use "make deps" and "make pkg" only once BEFORE start'
 	@echo ""
 	@echo 'make mmc                       - Build "mmc.img"'
-	@echo 'make write                     - Write "mmc.img" to /dev/mmcblk1'
+	@echo 'make write                     - Write "mmc.img" to /dev/$(MMC_DEV)'
+	@echo 'if mmc is other try MMC_DEV=mmcblk1 or something else.'
 	@echo ""
+	
+
 # #############################################################################
 deps:
 	sudo apt install -y zstd u-boot-tools dosfstools
