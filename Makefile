@@ -1,30 +1,15 @@
-# sudo chmod 777 /opt
-# mkdir -p /opt/mysdk
-# git clone https://github.com/metamot/opi5plus-bbmmc /opt/mysdk
-# cd /opt/mysdk
-# make deps
-# make pkg
-# make mmc
-# >> insert microsd
-# make write
-
-# Add sync for ESD-touch when Opi5 imidiately shutdown from ESD-touch
-# SYNC=
+PWD=$(shell pwd)
+# Add sync for ESD-touch when Opi5 imidiately shutdown from ESD-touch #SYNC=
 SYNC=sync
-
+# How many parrallel jobs? If anything is wrong, pls use only ONE, i.e. "make JOBS=-j1"
+JOBS=-j12
 #Verbose - default minimal (=0) , set VERB=1 to lots of verbose
 VERB=0
-# Uboot Verbose
-UVERB=$(VERB)
-# Kernel Verbose
-KVERB=$(VERB)
-# Busybox Verbose
-BVERB=$(VERB)
 # You can create logs if VERB=1 and redirect "1"(stdout) to file and "2"(stderr) to file, like this:
-# $ make VERB=1 1>1.txt 2>2.txt
+# $ make JOBS=-j1 VERB=1 1>1.txt 2>2.txt
 # see 1.txt and 2.txt for more info
 
-# BRD=opi5
+# BRD=opi5 # not supported
 BRD=opi5plus
 
 ifeq ($(BRD),opi5)
@@ -45,15 +30,59 @@ KERNEL_CONFIG=kernel_my_config
 
 BUSYBOX_CONFIG=busybox_my_config
 
-# How many parrallel jobs? If anything is wrong, pls use only ONE, i.e. "make JOBS=-j1"
-JOBS=-j12
+LFS=$(PWD)/lfs
+LFS_HST=aarch64-linux-gnu
+LFS_TGT=aarch64-cross-linux-gnu
 
-# Default mmc-device (if emmc present then mmcblk0=emmc, mmcblk1=microsd, in other cases mmcblk0=microsd)
-MMC_DEV=mmcblk1
-
-KERNAM=.my
+RK3588_FLAGS = -mcpu=cortex-a76.cortex-a55+crypto
+BASE_OPT_FLAGS = $(RK3588_FLAGS) -Os
+OPT_FLAGS = CFLAGS="$(BASE_OPT_FLAGS)" CPPFLAGS="$(BASE_OPT_FLAGS)" CXXFLAGS="$(BASE_OPT_FLAGS)"
 
 #echo | gcc -mcpu=cortex-a76.cortex-a55+crypto+sve -xc - -o - -S | grep arch
+
+BINUTILS_VER=2.38
+BINUTILS_OPT =
+BINUTILS_OPT+= --with-sysroot=$(LFS)
+BINUTILS_OPT+= --prefix=$(LFS)/tools
+BINUTILS_OPT+= --target=$(LFS_TGT)
+BINUTILS_OPT+= --disable-nls
+BINUTILS_OPT+= --disable-werror
+BINUTILS_OPT+= $(OPT_FLAGS)
+
+MPFR_VER=4.1.0
+GMP_VER=6.2.1
+MPC_VER=1.2.1
+GLIBC_VER=2.35
+
+GCC_VER=11.2.0
+GCC_OPT =
+GCC_OPT+= --with-sysroot=$(LFS)
+GCC_OPT+= --prefix=$(LFS)/tools
+GCC_OPT+= --target=$(LFS_TGT)
+GCC_OPT+= --with-glibc-version=$(GLIBC_VER)
+GCC_OPT+= --with-newlib
+GCC_OPT+= --without-headers
+GCC_OPT+= --enable-initfini-array
+GCC_OPT+= --disable-nls
+GCC_OPT+= --disable-shared
+GCC_OPT+= --disable-multilib
+GCC_OPT+= --disable-decimal-float
+GCC_OPT+= --disable-threads
+GCC_OPT+= --disable-libatomic
+GCC_OPT+= --disable-libgomp
+GCC_OPT+= --disable-libquadmath
+GCC_OPT+= --disable-libssp
+GCC_OPT+= --disable-libvtv
+GCC_OPT+= --disable-libstdcxx
+GCC_OPT+= --enable-languages=c,c++
+GCC_OPT+= $(OPT_FLAGS)
+
+PKG+=pkg/binutils-$(BINUTILS_VER).tar.xz
+PKG+=pkg/mpfr-$(MPFR_VER).tar.xz
+PKG+=pkg/gmp-$(GMP_VER).tar.xz
+PKG+=pkg/mpc-$(MPC_VER).tar.gz
+PKG+=pkg/gcc-$(GCC_VER).tar.xz
+
 
 all: deps pkg mmc
 
@@ -83,23 +112,26 @@ clean_pkg:
 deepclean: easyclean clean_pkg
 help:
 	@echo ""
-	@echo "BRD=$(BRD), UbootCfg=$(UBOOT_DEFCONFIG), jobs=$(JOBS), verbose=$(VERB)"
+	@echo "BRD=$(BRD), UbootCfg=$(UBOOT_DEFCONFIG), jobs=$(JOBS), verbose=$(VERB), cur_prj_dir=$(PWD), opt=$(BASE_OPT_FLAGS)"
 	@echo ""
 	@echo 'make deps                      - Install Hosts-Deps (sudo required)'
 	@echo 'make pkg                       - Download all packages before build'
 	@echo 'WARNING: You need use "make deps" and "make pkg" only once BEFORE start'
 	@echo ""
 	@echo 'make mmc                       - Build "mmc.img"'
-	@echo 'make write                     - Write "mmc.img" to /dev/$(MMC_DEV)'
-	@echo 'if mmc is other try MMC_DEV=mmcblk1 or something else.'
+	@echo 'make flash                     - Flash "mmc.img" via USB'
+	@echo 'make write_tst                 - Check for microSD present in slot'
+	@echo 'make write_run                 - Write "mmc.img" microSD'
 	@echo ""
 	
 
 # #############################################################################
 deps:
-	sudo apt install -y zstd u-boot-tools dosfstools
+	sudo apt install -y zstd u-boot-tools dosfstools libudev-dev libusb-1.0-0-dev dh-autoreconf texinfo libisl23 libisl-dev
 # #############################################################################
-pkg: pkg/orangepi5-atf.cpio.zst pkg/orangepi5-rkbin-only_rk3588.cpio.zst pkg/orangepi5-uboot.cpio.zst pkg/orangepi5-linux510-xunlong.cpio.zst pkg/busybox.cpio.zst
+
+pkg: pkg/orangepi5-atf.cpio.zst pkg/orangepi5-rkbin-only_rk3588.cpio.zst pkg/orangepi5-uboot.cpio.zst pkg/orangepi5-linux510-xunlong.cpio.zst pkg/busybox.cpio.zst pkg/rkdeveloptool.cpio.zst $(PKG)
+
 pkg/orangepi5-atf.cpio.zst:
 	@echo ""
 	@echo "=== Download ATF(ArmTrustedFirmware) Sources ==="
@@ -164,13 +196,28 @@ pkg/busybox.cpio.zst:
 	$(SYNC)
 	@echo "... Done! ...."
 	@echo ""
+pkg/rkdeveloptool.cpio.zst:
+	@echo ""
+	@echo "=== Download rkdeveloptool ==="
+	mkdir -p pkg
+	mkdir -p tmp/rkdeveloptool
+	git clone https://github.com/rockchip-linux/rkdeveloptool tmp/rkdeveloptool
+	sed -i "1491s/buffer\[5\]/buffer\[558\]/" tmp/rkdeveloptool/main.cpp
+	rm -fr tmp/rkdeveloptool/.git
+	@echo "--- Pack rkdeveloptool as cpio.zst ---"
+	cd tmp/rkdeveloptool && find . -print0 | cpio -o0H newc | zstd -z9T9 > ../../pkg/rkdeveloptool.cpio.zst
+	rm -fr tmp/rkdeveloptool
+	$(SYNC)
+	@echo "... Done! ...."
+	@echo ""
+
 # #############################################################################
 parts/u-boot/v2017.09-rk3588/Makefile: pkg/orangepi5-uboot.cpio.zst
 	mkdir -p parts/u-boot/v2017.09-rk3588
 	pv pkg/orangepi5-uboot.cpio.zst | zstd -d | cpio -iduH newc -D parts/u-boot/v2017.09-rk3588
 	cp -far cfg/$(UBOOT_DEFCONFIG) parts/u-boot/v2017.09-rk3588/configs
-	sed -i "s/-march=armv8-a+nosimd/-mcpu=cortex-a76.cortex-a55+crypto+sve/" parts/u-boot/v2017.09-rk3588/arch/arm/Makefile
-	sed -i "s/-O2/-Os -mcpu=cortex-a76.cortex-a55+crypto+sve/" parts/u-boot/v2017.09-rk3588/Makefile
+	sed -i "s/-march=armv8-a+nosimd/$(RK3588_FLAGS)/" parts/u-boot/v2017.09-rk3588/arch/arm/Makefile
+	sed -i "s/-O2/$(BASE_OPT_FLAGS)/" parts/u-boot/v2017.09-rk3588/Makefile
 	sed -i "s/CONFIG_BOOTDELAY=3/CONFIG_BOOTDELAY=0/" parts/u-boot/v2017.09-rk3588/configs/orangepi_5_defconfig
 	sed -i "s/CONFIG_BOOTDELAY=3/CONFIG_BOOTDELAY=0/" parts/u-boot/v2017.09-rk3588/configs/orangepi_5b_defconfig
 	sed -i "s/CONFIG_BOOTDELAY=3/CONFIG_BOOTDELAY=0/" parts/u-boot/v2017.09-rk3588/configs/orangepi_5_plus_defconfig
@@ -183,19 +230,19 @@ endif
 	$(SYNC)
 parts/u-boot/build_mkimage/.config: parts/u-boot/v2017.09-rk3588/Makefile
 	mkdir -p parts/u-boot/build_mkimage
-	cd parts/u-boot/v2017.09-rk3588 && make O=../build_mkimage V=$(UVERB) CROSS_COMPILE=aarch64-linux-gnu- $(UBOOT_DEFCONFIG)
+	cd parts/u-boot/v2017.09-rk3588 && make O=../build_mkimage V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- $(UBOOT_DEFCONFIG)
 	$(SYNC)
 parts/u-boot/build_mkimage/tools/mkimage: parts/u-boot/build_mkimage/.config
 	mkdir -p parts/u-boot/build_mkimage
-	cd parts/u-boot/v2017.09-rk3588 && make O=../build_mkimage V=$(UVERB) CROSS_COMPILE=aarch64-linux-gnu- $(JOBS) tools
+	cd parts/u-boot/v2017.09-rk3588 && make O=../build_mkimage V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- $(JOBS) tools
 	$(SYNC)
 # #############################################################################
 ## Uboot BUILD
 parts/u-boot/trusted/Makefile: pkg/orangepi5-atf.cpio.zst
 	mkdir -p parts/u-boot/trusted
 	pv pkg/orangepi5-atf.cpio.zst | zstd -d | cpio -iduH newc -D parts/u-boot/trusted
-	sed -i "s/ASFLAGS		+=	\$$(march-directive)/ASFLAGS += -mcpu=cortex-a76.cortex-a55+crypto+sve/" parts/u-boot/trusted/Makefile
-	sed -i "s/TF_CFLAGS   +=	\$$(march-directive)/TF_CFLAGS += -mcpu=cortex-a76.cortex-a55+crypto+sve/" parts/u-boot/trusted/Makefile
+	sed -i "s/ASFLAGS		+=	\$$(march-directive)/ASFLAGS += $(RK3588_FLAGS)/" parts/u-boot/trusted/Makefile
+	sed -i "s/TF_CFLAGS   +=	\$$(march-directive)/TF_CFLAGS += $(RK3588_FLAGS)/" parts/u-boot/trusted/Makefile
 	$(SYNC)
 parts/u-boot/blobs/rk3588_ddr_lp4_2112MHz_lp5_2736MHz_v1.08.bin: pkg/orangepi5-rkbin-only_rk3588.cpio.zst
 	mkdir -p parts/u-boot/blobs
@@ -215,7 +262,7 @@ parts/u-boot/build/arch/arm/mach-rockchip/decode_bl31.py: parts/u-boot/v2017.09-
 	cp -far --no-preserve=timestamps parts/u-boot/v2017.09-rk3588/arch/arm/mach-rockchip/*.py parts/u-boot/build/arch/arm/mach-rockchip
 	$(SYNC)
 parts/u-boot/trusted/build/rk3588/release/bl31/bl31.elf: parts/u-boot/trusted/Makefile
-	cd parts/u-boot/trusted && make V=$(UVERB) $(JOBS) CROSS_COMPILE=aarch64-linux-gnu- PLAT=rk3588 bl31
+	cd parts/u-boot/trusted && make V=$(VERB) $(JOBS) CROSS_COMPILE=aarch64-linux-gnu- PLAT=rk3588 bl31
 	$(SYNC)
 parts/u-boot/blobs/bl31.elf: parts/u-boot/trusted/build/rk3588/release/bl31/bl31.elf
 	ln -sf ../trusted/build/rk3588/release/bl31/bl31.elf $@
@@ -224,15 +271,15 @@ parts/u-boot/v2017.09-rk3588/configs/$(UBOOT_DEFCONFIG): parts/u-boot/v2017.09-r
 	cp -far cfg/$(UBOOT_DEFCONFIG) parts/u-boot/v2017.09-rk3588/configs
 	touch $@
 parts/u-boot/build/.config: parts/u-boot/build/arch/arm/mach-rockchip/decode_bl31.py parts/u-boot/blobs/rk3588_ddr_lp4_2112MHz_lp5_2736MHz_v1.08.bin parts/u-boot/blobs/bl31.elf parts/u-boot/v2017.09-rk3588/configs/$(UBOOT_DEFCONFIG)
-	cd parts/u-boot/v2017.09-rk3588 && make O=../build V=$(UVERB) CROSS_COMPILE=aarch64-linux-gnu- $(UBOOT_DEFCONFIG) && touch ../build/.config
+	cd parts/u-boot/v2017.09-rk3588 && make O=../build V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- $(UBOOT_DEFCONFIG) && touch ../build/.config
 	$(SYNC)
 uboot_config: parts/u-boot/build/.config
 parts/u-boot/build/spl/u-boot-spl.bin: parts/u-boot/build/.config
-	cd parts/u-boot/v2017.09-rk3588 && make O=../build V=$(UVERB) CROSS_COMPILE=aarch64-linux-gnu- $(JOBS) spl/u-boot-spl.bin && touch ../build/spl/u-boot-spl.bin
+	cd parts/u-boot/v2017.09-rk3588 && make O=../build V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- $(JOBS) spl/u-boot-spl.bin && touch ../build/spl/u-boot-spl.bin
 	$(SYNC)
 parts/u-boot/build/u-boot.itb: parts/u-boot/build/.config parts/u-boot/build/spl/u-boot-spl.bin
 	mkdir -p parts/u-boot/build
-	cd parts/u-boot/v2017.09-rk3588 && make O=../build V=$(UVERB) CROSS_COMPILE=aarch64-linux-gnu- $(JOBS) BL31=../blobs/$(BL31_FILE) u-boot.dtb u-boot.itb
+	cd parts/u-boot/v2017.09-rk3588 && make O=../build V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- $(JOBS) BL31=../blobs/$(BL31_FILE) u-boot.dtb u-boot.itb
 	$(SYNC)
 parts/u-boot/uboot-head.bin: parts/u-boot/build_mkimage/tools/mkimage parts/u-boot/build/spl/u-boot-spl.bin parts/u-boot/blobs/rk3588_ddr_lp4_2112MHz_lp5_2736MHz_v1.08.bin
 	$< -n rk3588 -T rksd -d "parts/u-boot/blobs/rk3588_ddr_lp4_2112MHz_lp5_2736MHz_v1.08.bin:parts/u-boot/build/spl/u-boot-spl.bin" $@
@@ -352,14 +399,14 @@ parts/kernel/bld/.config: cfg/$(KERNEL_CONFIG) parts/kernel/bld/drivers/net/wire
 	cp -far $< $@ && touch $@
 	$(SYNC)
 parts/kernel/bld/Makefile: parts/kernel/bld/.config
-#	cd parts/kernel/src && make O=../bld V=$(KVERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 EXTRAVERSION=$(KERNAM) olddefconfig && cd ../../ && touch $@
-	cd parts/kernel/src && make O=../bld V=$(KVERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 olddefconfig
+#	cd parts/kernel/src && make O=../bld V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 EXTRAVERSION=$(KERNAM) olddefconfig && cd ../../ && touch $@
+	cd parts/kernel/src && make O=../bld V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 olddefconfig
 	$(SYNC)
 kernel_config: parts/kernel/bld/Makefile
 out/fat/Image: parts/kernel/bld/Makefile
 	mkdir -p out/fat/dtb
 	mkdir -p out/rd/kermod
-	cd parts/kernel/src && make O=../bld $(JOBS) V=$(KVERB) KCFLAGS="-mcpu=cortex-a76.cortex-a55+crypto+sve" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 dtbs && make O=../bld $(JOBS) V=$(KVERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_DTBS_PATH=../../../out/fat/dtb dtbs_install && make O=../bld $(JOBS) V=$(KVERB) KCFLAGS="-mcpu=cortex-a76.cortex-a55+crypto+sve" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 Image && make O=../bld $(JOBS) V=$(KVERB) KCFLAGS="-mcpu=cortex-a76.cortex-a55+crypto+sve" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 modules && make O=../bld $(JOBS) V=$(KVERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_MOD_PATH=../../../out/rd/kermod modules_install && make O=../bld $(JOBS) V=$(KVERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_HDR_PATH=../../../out/rd/kermod headers_install
+	cd parts/kernel/src && make O=../bld $(JOBS) V=$(VERB) KCFLAGS="$(RK3588_FLAGS)" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 dtbs && make O=../bld $(JOBS) V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_DTBS_PATH=../../../out/fat/dtb dtbs_install && make O=../bld $(JOBS) V=$(VERB) KCFLAGS="$(RK3588_FLAGS)" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 Image && make O=../bld $(JOBS) V=$(VERB) KCFLAGS="$(RK3588_FLAGS)" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 modules && make O=../bld $(JOBS) V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_MOD_PATH=../../../out/rd/kermod modules_install && make O=../bld $(JOBS) V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_HDR_PATH=../../../out/rd/kermod headers_install
 	cp -far parts/kernel/bld/arch/arm64/boot/Image out/fat/
 	touch $@
 kernel: out/fat/Image
@@ -386,19 +433,15 @@ parts/busybox/bld/.config: cfg/$(BUSYBOX_CONFIG) parts/busybox/src/Makefile
 	cp -far $< parts/busybox/bld/.config && touch $@
 
 parts/busybox/bld/busybox: parts/busybox/bld/.config
-	cd parts/busybox/bld && make $(JOBS) V=$(BVERB) CFLAGS="-Os -mcpu=cortex-a76.cortex-a55+crypto+sve" KBUILD_SRC=../src -f ../src/Makefile
+	cd parts/busybox/bld && make $(JOBS) V=$(VERB) CFLAGS="$(BASE_OPT_FLAGS)" KBUILD_SRC=../src -f ../src/Makefile
 
 out/rd/abin/busybox: parts/busybox/bld/busybox
 	mkdir -p out/rd/abin
 	cp -far $< $@ && touch $@
-
-out/rd/init: out/rd/abin/busybox
 	cd out/rd && ln -sf /abin/busybox init
-
-out/rd/abin/login: out/rd/init
 	cd out/rd/abin && ln -sf busybox login && ln -sf busybox poweroff && ln -sf busybox reboot && ln -sf busybox getty && ln -sf busybox sh && ln -sf busybox ash && ln -sf busybox cat && ln -sf busybox mount && ln -sf busybox echo && ln -sf busybox mkdir && ln -sf busybox passwd && ln -sf busybox false && ln -sf busybox sync && ln -sf busybox ls && ln -sf busybox who && ln -sf busybox whoami
 
-out/rd/aetc/inittab: out/rd/abin/login
+out/rd/aetc/inittab: out/rd/abin/busybox
 	mkdir -p out/rd/aetc/init.d
 #
 	echo "::sysinit:/abin/echo Hello1" > $@
@@ -500,7 +543,7 @@ out/fat/uInitrd: out/rd/aetc/inittab
 out/mmc-fat.bin: out/fat/boot.scr out/fat/orangepiEnv.txt out/fat/Image out/fat/uInitrd
 	mkdir -p tmp/mnt
 	dd of=$@ if=/dev/zero bs=1M count=0 seek=190
-	mkfs.fat -F 32 -n "opi_boot" -i A77ACF93 $@
+	/sbin/mkfs.fat -F 32 -n "opi_boot" -i A77ACF93 $@
 	sudo mount $@ tmp/mnt/
 	sudo cp --force --no-preserve=all --recursive out/fat/* tmp/mnt/
 	$(SYNC)
@@ -520,5 +563,108 @@ out/mmc.img: parts/u-boot/uboot-head.bin parts/u-boot/uboot-tail.bin out/mmc-fat
 
 mmc: out/mmc.img
 
-write: out/mmc.img
-	sudo dd if=$< of=/dev/$(MMC_DEV) bs=1M && sudo sync
+parts/rkdeveloptool/src/main.cpp: pkg/rkdeveloptool.cpio.zst
+	mkdir -p parts/rkdeveloptool/src
+	pv pkg/rkdeveloptool.cpio.zst | zstd -d | cpio -iduH newc -D parts/rkdeveloptool/src
+	$(SYNC)
+
+parts/rkdeveloptool/src/cfg/compile:parts/rkdeveloptool/src/main.cpp
+	cd parts/rkdeveloptool/src && autoreconf -i
+
+parts/rkdeveloptool/bld/Makefile: parts/rkdeveloptool/src/cfg/compile
+	mkdir -p parts/rkdeveloptool/bld
+	cd parts/rkdeveloptool/bld && ../src/configure CXXFLAGS="$(BASE_OPT_FLAGS)"
+
+parts/rkdeveloptool/bld/rkdeveloptool: parts/rkdeveloptool/bld/Makefile
+	cd parts/rkdeveloptool/bld && make $(JOBS) V=1
+
+out/rkdeveloptool: parts/rkdeveloptool/bld/rkdeveloptool
+	mkdir -p out
+	cp -far $< $@
+	strip --strip-all $@
+
+parts/u-boot/blobs/rk3588_spl_loader_v1.08.111.bin: parts/u-boot/blobs/rk3588_ddr_lp4_2112MHz_lp5_2736MHz_v1.08.bin
+
+out/usb_loader.bin: parts/u-boot/blobs/rk3588_spl_loader_v1.08.111.bin
+	mkdir -p out
+	cd out && ln -sf ../parts/u-boot/blobs/rk3588_spl_loader_v1.08.111.bin usb_loader.bin
+
+rkdeveloptool: out/rkdeveloptool out/usb_loader.bin
+
+flash: out/mmc.img out/rkdeveloptool out/usb_loader.bin
+	@echo "Connect usb-target, enter in maskrom, and press ENTER to continue"
+	@read line
+	cd out && sudo ./rkdeveloptool db usb_loader.bin && sudo ./rkdeveloptool wl 0 mmc.img && sudo ./rkdeveloptool rd 0
+
+
+write_tst: out/mmc.img
+#	@echo `ls /dev/mmcblk*boot0 | cut -c-12 | tr 01 10`
+	@echo "Insert microSD to slot, and press ENTER to continue"
+	@read line
+	sudo dd if=`ls /dev/mmcblk*boot0 | cut -c-12 | tr 01 10` count=1 | hexdump -C
+
+
+write_run: out/mmc.img
+	@echo "Here is dev eMMC"
+	ls /dev/mmcblk*boot0
+	ls /dev/mmcblk*boot0 | cut -c-12
+	@echo 'INFO: /dev/mmcblk*boot0 - is emmc, but "cut&tr" invert number for microSD'
+	@echo "Here is dev microSD"
+	ls /dev/mmcblk*boot0 | cut -c-12 | tr 01 10
+	@echo ""
+	@echo "Insert microSD (`ls /dev/mmcblk*boot0 | cut -c-12 | tr 01 10`) to slot, and press ENTER to continue."
+	@echo 'If unsure, press Ctrl+C now !'
+	@echo 'Check "lsblk" or use "make write_tst" for read only card test !'
+	@echo 'If really sure, press ENTER...'
+	@read line
+	sudo dd if=out/mmc.img of=`ls /dev/mmcblk*boot0 | cut -c-12 | tr 01 10` bs=1M status=progress && sudo sync
+
+pkg/binutils-$(BINUTILS_VER).tar.xz:
+	mkdir -p pkg
+	wget -P pkg https://ftp.gnu.org/gnu/binutils/binutils-$(BINUTILS_VER).tar.xz
+pkg/mpfr-$(MPFR_VER).tar.xz:
+	mkdir -p pkg
+	wget -P pkg https://www.mpfr.org/mpfr-4.1.0/mpfr-$(MPFR_VER).tar.xz
+pkg/gmp-$(GMP_VER).tar.xz:
+	mkdir -p pkg
+	wget -P pkg https://ftp.gnu.org/gnu/gmp/gmp-$(GMP_VER).tar.xz
+pkg/mpc-$(MPC_VER).tar.gz:
+	mkdir -p pkg
+	wget -P pkg https://ftp.gnu.org/gnu/mpc/mpc-$(MPC_VER).tar.gz
+pkg/gcc-$(GCC_VER).tar.xz:
+	mkdir -p pkg
+	wget -P pkg https://ftp.gnu.org/gnu/gcc/gcc-$(GCC_VER)/gcc-$(GCC_VER).tar.xz
+
+parts/host-binutils/binutils-$(BINUTILS_VER)/README: pkg/binutils-$(BINUTILS_VER).tar.xz
+	mkdir -p parts/host-binutils
+	tar -xJf $< -C parts/host-binutils && touch $@
+parts/host-binutils/bld/Makefile: parts/host-binutils/binutils-$(BINUTILS_VER)/README
+	mkdir -p parts/host-binutils/bld
+	cd parts/host-binutils/bld && ../binutils-$(BINUTILS_VER)/configure $(BINUTILS_OPT)
+parts/host-binutils/bld/binutils/addr2line: parts/host-binutils/bld/Makefile
+	cd parts/host-binutils/bld && make $(JOBS) V=$(VERB)
+tools/bin/$(LFS_TGT)-addr2line: parts/host-binutils/bld/binutils/addr2line
+	cd parts/host-binutils/bld && make install
+binutils: tools/bin/$(LFS_TGT)-addr2line
+
+parts/host-gcc/gcc-$(GCC_VER)/README: pkg/gcc-$(GCC_VER).tar.xz
+	mkdir -p parts/host-gcc
+	tar -xJf $< -C parts/host-gcc && touch $@
+parts/host-gcc/gcc-$(GCC_VER)/gmp/README: pkg/gmp-$(GMP_VER).tar.xz parts/host-gcc/gcc-$(GCC_VER)/README
+	tar -xJf $< -C parts/host-gcc/gcc-$(GCC_VER)
+	cd parts/host-gcc/gcc-$(GCC_VER) && mv -v gmp-$(GMP_VER) gmp && touch gmp/README
+parts/host-gcc/gcc-$(GCC_VER)/mpfr/README: pkg/mpfr-$(MPFR_VER).tar.xz parts/host-gcc/gcc-$(GCC_VER)/README
+	tar -xJf $< -C parts/host-gcc/gcc-$(GCC_VER)
+	cd parts/host-gcc/gcc-$(GCC_VER) && mv -v mpfr-$(MPFR_VER) mpfr && touch mpfr/README
+parts/host-gcc/gcc-$(GCC_VER)/mpc/README: pkg/mpc-$(MPC_VER).tar.gz parts/host-gcc/gcc-$(GCC_VER)/README
+	tar -xzf $< -C parts/host-gcc/gcc-$(GCC_VER)
+	cd parts/host-gcc/gcc-$(GCC_VER) && mv -v mpc-$(MPC_VER) mpc && touch mpc/README
+parts/host-gcc/bld/Makefile: parts/host-gcc/gcc-$(GCC_VER)/README parts/host-gcc/gcc-$(GCC_VER)/gmp/README parts/host-gcc/gcc-$(GCC_VER)/mpfr/README parts/host-gcc/gcc-$(GCC_VER)/mpc/README
+	mkdir -p parts/host-gcc/bld
+	cd parts/host-gcc/bld && ../gcc-$(GCC_VER)/configure $(GCC_OPT)
+parts/host-gcc/bld/gcc/cc1: parts/host-gcc/bld/Makefile
+	cd parts/host-gcc/bld && make $(JOBS) V=$(VERB)
+tools/bin/$(LFS_TGT)-gcc: parts/host-gcc/bld/gcc/cc1
+	cd parts/host-gcc/bld && make install
+	cat parts/host-gcc/gcc-$(GCC_VER)/gcc/limitx.h parts/host-gcc/gcc-$(GCC_VER)/gcc/glimits.h parts/host-gcc/gcc-$(GCC_VER)/gcc/limity.h > tools/lib/gcc/$(LFS_TGT)/$(GCC_VER)/install-tools/include/limits.h
+gcc: tools/bin/$(LFS_TGT)-gcc
