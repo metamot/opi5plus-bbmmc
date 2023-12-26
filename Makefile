@@ -30,18 +30,40 @@ KERNEL_CONFIG=kernel_my_config
 
 BUSYBOX_CONFIG=busybox_my_config
 
-LFS=$(PWD)/lfs
-LFS_HST=aarch64-linux-gnu
-LFS_TGT=aarch64-cross-linux-gnu
-
 RK3588_FLAGS = -mcpu=cortex-a76.cortex-a55+crypto
 BASE_OPT_FLAGS = $(RK3588_FLAGS) -Os
 OPT_FLAGS = CFLAGS="$(BASE_OPT_FLAGS)" CPPFLAGS="$(BASE_OPT_FLAGS)" CXXFLAGS="$(BASE_OPT_FLAGS)"
 
 #echo | gcc -mcpu=cortex-a76.cortex-a55+crypto+sve -xc - -o - -S | grep arch
 
-BINUTILS_VER=2.38
-BINUTILS_OPT =
+
+### LFS
+LFS=$(PWD)/lfs
+LFS_HST=aarch64-linux-gnu
+LFS_TGT=aarch64-cross-linux-gnu
+
+GLIBC_VER=2.32
+BINUTILS_VER=2.35
+MPFR_VER=4.1.0
+GMP_VER=6.2.0
+MPC_VER=1.1.0
+GCC_VER=10.2.0
+M4_VER=1.4.18
+NCURSES_VER=6.2
+BASH_VER=5.0
+CORE_UTILS_VER=8.32
+DIFF_UTILS_VER=3.7
+FILE_VER=5.39
+FIND_UTILS_VER=4.7.0
+GAWK_VER=5.1.0
+GREP_VER=3.4
+GZIP_VER=1.10
+MAKE_VER=4.3
+PATCH_VER=2.7.6
+SED_VER=4.8
+TAR_VER=1.32
+XZ_VER=5.2.5
+
 BINUTILS_OPT+= --with-sysroot=$(LFS)
 BINUTILS_OPT+= --prefix=$(LFS)/tools
 BINUTILS_OPT+= --target=$(LFS_TGT)
@@ -49,17 +71,22 @@ BINUTILS_OPT+= --disable-nls
 BINUTILS_OPT+= --disable-werror
 BINUTILS_OPT+= $(OPT_FLAGS)
 
-MPFR_VER=4.1.0
-GMP_VER=6.2.1
-MPC_VER=1.2.1
-GLIBC_VER=2.35
+BINUTILS_OPT2+= --prefix=/usr
+#BINUTILS_OPT2+= --build=$(../config.guess)
+BINUTILS_OPT2+= --host=$(LFS_TGT)
+BINUTILS_OPT2+= --disable-nls
+BINUTILS_OPT2+= --enable-shared
+BINUTILS_OPT2+= --disable-werror
+BINUTILS_OPT2+= --enable-64-bit-bfd
+#BINUTILS_OPT2+= --with-build-sysroot=$(LFS)
+#BINUTILS_OPT2+= AR_FOR_TARGET=$(LFS_TGT)-ar
+#BINUTILS_OPT2+= --with-build-time-tools=$(LFS)/tools/bin
+BINUTILS_OPT2+= $(OPT_FLAGS)
 
-GCC_VER=11.2.0
-GCC_OPT =
 GCC_OPT+= --with-sysroot=$(LFS)
 GCC_OPT+= --prefix=$(LFS)/tools
 GCC_OPT+= --target=$(LFS_TGT)
-GCC_OPT+= --with-glibc-version=$(GLIBC_VER)
+GCC_OPT+= --with-glibc-version=2.11
 GCC_OPT+= --with-newlib
 GCC_OPT+= --without-headers
 GCC_OPT+= --enable-initfini-array
@@ -77,11 +104,147 @@ GCC_OPT+= --disable-libstdcxx
 GCC_OPT+= --enable-languages=c,c++
 GCC_OPT+= $(OPT_FLAGS)
 
-PKG+=pkg/binutils-$(BINUTILS_VER).tar.xz
-PKG+=pkg/mpfr-$(MPFR_VER).tar.xz
-PKG+=pkg/gmp-$(GMP_VER).tar.xz
-PKG+=pkg/mpc-$(MPC_VER).tar.gz
-PKG+=pkg/gcc-$(GCC_VER).tar.xz
+
+#GCC_OPT2+= --build=$(../config.guess)
+GCC_OPT2+= --host=$(LFS_TGT)
+GCC_OPT2+= --prefix=/usr
+#GCC_OPT2+= CC_FOR_TARGET=$(LFS_TGT)-gcc
+GCC_OPT2+= --with-build-sysroot=$(LFS)
+GCC_OPT2+= --enable-initfini-array
+GCC_OPT2+= --disable-nls
+GCC_OPT2+= --disable-multilib
+GCC_OPT2+= --disable-decimal-float
+GCC_OPT2+= --disable-libatomic
+GCC_OPT2+= --disable-libgomp
+GCC_OPT2+= --disable-libquadmath
+GCC_OPT2+= --disable-libssp
+GCC_OPT2+= --disable-libvtv
+GCC_OPT2+= --disable-libstdcxx
+GCC_OPT2+= --enable-languages=c,c++
+GCC_OPT2+= $(OPT_FLAGS)
+
+GLIBC_OPT+= --prefix=/usr
+GLIBC_OPT+= --host=$(LFS_TGT)
+GLIBC_OPT+= --enable-kernel=3.2
+GLIBC_OPT+= --with-headers=$(LFS)/usr/include
+GLIBC_OPT+= --without-selinux
+GLIBC_OPT+= $(OPT_FLAGS)
+      
+LIBCPP_OPT+= --host=$(LFS_TGT)
+LIBCPP_OPT+= --prefix=/usr
+LIBCPP_OPT+= --disable-multilib
+LIBCPP_OPT+= --disable-nls
+LIBCPP_OPT+= --disable-libstdcxx-pch
+#LIBCPP_OPT+= --with-gxx-include-dir=$(LFS)/tools/$(LFS_TGT)/include/c++/$(GCC_VER)
+LIBCPP_OPT+= --with-gxx-include-dir=/tools/$(LFS_TGT)/include/c++/$(GCC_VER)
+LIBCPP_OPT+= $(OPT_FLAGS)
+
+M4_OPT+= --prefix=/usr
+M4_OPT+= --host=$(LFS_TGT)
+M4_OPT+= $(OPT_FLAGS)
+
+
+NCURSES_OPT+= --prefix=/usr
+NCURSES_OPT+= --host=$(LFS_TGT)
+#NCURSES_OPT+= --build=$(./config.guess)
+#NCURSES_OPT+= --mandir=/usr/share/man
+#NCURSES_OPT+= --with-manpage-format=normal
+
+NCURSES_OPT+= --without-manpages
+#NCURSES_OPT+= --with-default-terminfo-dir=/usr/share/terminfo
+NCURSES_OPT+= --with-shared
+#NCURSES_OPT+= --without-gpm
+NCURSES_OPT+= --without-debug
+NCURSES_OPT+= --without-ada
+#NCURSES_OPT+= --without-normal
+#NCURSES_OPT+= --without-cxx
+#NCURSES_OPT+= --without-cxx-binding
+#NCURSES_OPT+= --disable-db-install
+
+NCURSES_OPT+= --with-termlib
+NCURSES_OPT+= --with-ticlib
+NCURSES_OPT+= --enable-widec
+
+NCURSES_OPT+= $(OPT_FLAGS)
+
+
+BASH_OPT+= --prefix=/usr
+#BASH_OPT+= --build=$(support/config.guess)
+BASH_OPT+= --host=$(LFS_TGT)
+BASH_OPT+= --without-bash-malloc
+BASH_OPT+= $(OPT_FLAGS)
+
+CORE_UTILS_OPT+= --prefix=/usr
+CORE_UTILS_OPT+= --host=$(LFS_TGT)
+#CORE_UTILS_OPT+= --build=$(build-aux/config.guess)
+CORE_UTILS_OPT+= --enable-install-program=hostname
+CORE_UTILS_OPT+= --enable-no-install-program=kill,uptime
+
+#CORE_UTILS_OPT+= --disable-acl
+#CORE_UTILS_OPT+= --disable-libcap
+#CORE_UTILS_OPT+= --disable-rpath
+#CORE_UTILS_OPT+= --disable-single-binary
+#CORE_UTILS_OPT+= --disable-xattr
+#CORE_UTILS_OPT+= --without-gmp
+#CORE_UTILS_OPT+= --enable-install-program=ln,realpath
+#CORE_UTILS_OPT+= --enable-no-install-program=date
+CORE_UTILS_OPT+= --without-selinux
+CORE_UTILS_OPT+= $(OPT_FLAGS)
+
+DIFF_UTILS_OPT+= --prefix=/usr
+DIFF_UTILS_OPT+= --host=$(LFS_TGT)
+DIFF_UTILS_OPT+= $(OPT_FLAGS)
+
+FILE_OPT+= --prefix=/usr
+FILE_OPT+= --host=$(LFS_TGT)
+FILE_OPT+= $(OPT_FLAGS)
+
+FIND_UTILS_OPT+= --prefix=/usr
+FIND_UTILS_OPT+= --host=$(LFS_TGT)
+FIND_UTILS_OPT+= --without-selinux
+FIND_UTILS_OPT+= $(OPT_FLAGS)
+
+GAWK_OPT+= --prefix=/usr
+GAWK_OPT+= --host=$(LFS_TGT)
+GAWK_OPT+= $(OPT_FLAGS)
+
+GREP_OPT+= --prefix=/usr
+GREP_OPT+= --host=$(LFS_TGT)
+#GREP_OPT+= --bindir=/bin
+GREP_OPT+= $(OPT_FLAGS)
+
+GZIP_OPT+= --prefix=/usr
+GZIP_OPT+= --host=$(LFS_TGT)
+GZIP_OPT+= $(OPT_FLAGS)
+
+MAKE_OPT+= --prefix=/usr
+MAKE_OPT+= --without-guile
+MAKE_OPT+= --host=$(LFS_TGT)
+MAKE_OPT+= $(OPT_FLAGS)
+
+PATCH_OPT+= --prefix=/usr
+PATCH_OPT+= --host=$(LFS_TGT)
+PATCH_OPT+= $(OPT_FLAGS)
+
+SED_OPT+= --prefix=/usr
+SED_OPT+= --host=$(LFS_TGT)
+#SED_OPT+= --bindir=/bin
+SED_OPT+= --without-selinux
+SED_OPT+= $(OPT_FLAGS)
+
+TAR_OPT+= --prefix=/usr
+TAR_OPT+= --host=$(LFS_TGT)
+#TAR_OPT+= --bindir=/bin
+TAR_OPT+= --without-selinux
+TAR_OPT+= $(OPT_FLAGS)
+
+XZ_OPT+= --prefix=/usr
+XZ_OPT+= --host=$(LFS_TGT)
+XZ_OPT+= --disable-static
+XZ_OPT+= --docdir=/usr/share/doc/xz-5.2.5
+XZ_OPT+= $(OPT_FLAGS)
+
+###
 
 
 all: deps pkg mmc
@@ -127,8 +290,33 @@ help:
 
 # #############################################################################
 deps:
-	sudo apt install -y zstd u-boot-tools dosfstools libudev-dev libusb-1.0-0-dev dh-autoreconf texinfo libisl23 libisl-dev
+	sudo apt install -y zstd u-boot-tools dosfstools libudev-dev libusb-1.0-0-dev dh-autoreconf texinfo libisl23 libisl-dev python gawk gettext
 # #############################################################################
+
+PKG+=pkg/binutils-$(BINUTILS_VER).tar.xz
+PKG+=pkg/mpfr-$(MPFR_VER).tar.xz
+PKG+=pkg/gmp-$(GMP_VER).tar.xz
+PKG+=pkg/mpc-$(MPC_VER).tar.gz
+PKG+=pkg/gcc-$(GCC_VER).tar.xz
+PKG+=pkg/glibc-$(GLIBC_VER).tar.xz
+PKG+=pkg/glibc-$(GLIBC_VER)-fhs-1.patch
+PKG+=pkg/m4-$(M4_VER).tar.xz
+PKG+=pkg/ncurses-$(NCURSES_VER).tar.gz
+PKG+=pkg/bash-$(BASH_VER).tar.gz
+PKG+=pkg/coreutils-$(CORE_UTILS_VER).tar.xz
+PKG+=pkg/diffutils-$(DIFF_UTILS_VER).tar.xz
+PKG+=pkg/file-$(FILE_VER).tar.gz
+PKG+=pkg/findutils-$(FIND_UTILS_VER).tar.xz
+PKG+=pkg/gawk-$(GAWK_VER).tar.xz
+PKG+=pkg/grep-$(GREP_VER).tar.xz
+PKG+=pkg/gzip-$(GZIP_VER).tar.xz
+PKG+=pkg/make-$(MAKE_VER).tar.gz
+PKG+=pkg/patch-$(PATCH_VER).tar.xz
+PKG+=pkg/sed-$(SED_VER).tar.xz
+PKG+=pkg/tar-$(TAR_VER).tar.xz
+PKG+=pkg/xz-$(XZ_VER).tar.xz
+
+
 
 pkg: pkg/orangepi5-atf.cpio.zst pkg/orangepi5-rkbin-only_rk3588.cpio.zst pkg/orangepi5-uboot.cpio.zst pkg/orangepi5-linux510-xunlong.cpio.zst pkg/busybox.cpio.zst pkg/rkdeveloptool.cpio.zst $(PKG)
 
@@ -406,11 +594,13 @@ kernel_config: parts/kernel/bld/Makefile
 out/fat/Image: parts/kernel/bld/Makefile
 	mkdir -p out/fat/dtb
 	mkdir -p out/rd/kermod
-	cd parts/kernel/src && make O=../bld $(JOBS) V=$(VERB) KCFLAGS="$(RK3588_FLAGS)" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 dtbs && make O=../bld $(JOBS) V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_DTBS_PATH=../../../out/fat/dtb dtbs_install && make O=../bld $(JOBS) V=$(VERB) KCFLAGS="$(RK3588_FLAGS)" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 Image && make O=../bld $(JOBS) V=$(VERB) KCFLAGS="$(RK3588_FLAGS)" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 modules && make O=../bld $(JOBS) V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_MOD_PATH=../../../out/rd/kermod modules_install && make O=../bld $(JOBS) V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_HDR_PATH=../../../out/rd/kermod headers_install
+	cd parts/kernel/src && make O=../bld $(JOBS) V=$(VERB) KCFLAGS="$(RK3588_FLAGS)" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 dtbs && make O=../bld $(JOBS) V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_DTBS_PATH=../../../out/fat/dtb dtbs_install && make O=../bld $(JOBS) V=$(VERB) KCFLAGS="$(RK3588_FLAGS)" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 Image && make O=../bld $(JOBS) V=$(VERB) KCFLAGS="$(RK3588_FLAGS)" CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 modules && make O=../bld $(JOBS) V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_MOD_PATH=../../../out/rd/kermod modules_install 
 	cp -far parts/kernel/bld/arch/arm64/boot/Image out/fat/
 	touch $@
 kernel: out/fat/Image
-
+out/rd/kermod/include/asm/ioctl.h: out/fat/Image
+	cd parts/kernel/src && make O=../bld $(JOBS) V=$(VERB) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64 INSTALL_HDR_PATH=../../../out/rd/kermod headers_install
+kernel_hdrs: out/rd/kermod/include/asm/ioctl.h
 
 parts/busybox/src/Makefile:
 	mkdir -p parts/busybox/src
@@ -439,13 +629,28 @@ out/rd/abin/busybox: parts/busybox/bld/busybox
 	mkdir -p out/rd/abin
 	cp -far $< $@ && touch $@
 	cd out/rd && ln -sf /abin/busybox init
-	cd out/rd/abin && ln -sf busybox login && ln -sf busybox poweroff && ln -sf busybox reboot && ln -sf busybox getty && ln -sf busybox sh && ln -sf busybox ash && ln -sf busybox cat && ln -sf busybox mount && ln -sf busybox echo && ln -sf busybox mkdir && ln -sf busybox passwd && ln -sf busybox false && ln -sf busybox sync && ln -sf busybox ls && ln -sf busybox who && ln -sf busybox whoami
+#	cd out/rd && mkdir -p usr
+#	cd out/rd && mkdir -p tmp
+#	cd out/rd && mkdir -p run
+#	cd out/rd && mkdir -p opt
+#	cd out/rd && mkdir -p mnt
+#	cd out/rd && mkdir -p media
+#	cd out/rd && mkdir -p home
+#	cd out/rd && ln -sf /usr/var var
+#	cd out/rd && ln -sf /usr/root root
+	cd out/rd && ln -sf /usr/etc etc
+	cd out/rd && ln -sf /usr/bin bin
+	cd out/rd && ln -sf /usr/sbin sbin
+	cd out/rd && ln -sf /usr/lib lib
+#	cd out/rd && ln -sf /usr/lib64 lib64
+	cd out/rd/abin && ln -sf busybox login && ln -sf busybox poweroff && ln -sf busybox reboot && ln -sf busybox getty && ln -sf busybox sh && ln -sf busybox ash && ln -sf busybox cat && ln -sf busybox mount && ln -sf busybox echo && ln -sf busybox mkdir && ln -sf busybox passwd && ln -sf busybox false && ln -sf busybox sync && ln -sf busybox ls && ln -sf busybox who && ln -sf busybox whoami && ln -sf busybox dd && ln -sf busybox vi && ln -sf busybox [ && ln -sf busybox [[ && ln -sf busybox df && ln -sf busybox du && ln -sf busybox modprobe && ln -sf busybox fdisk && ln -sf busybox ps && ln -sf busybox pstree && ln -sf busybox less && ln -sf busybox hexdump
 
 out/rd/aetc/inittab: out/rd/abin/busybox
+	mkdir -p out/rd/amnt/emmc
+	mkdir -p out/rd/amnt/microsd
 	mkdir -p out/rd/aetc/init.d
 #
-	echo "::sysinit:/abin/echo Hello1" > $@
-	echo "::sysinit:/abin/mkdir /sys" >> $@
+	echo "::sysinit:/abin/mkdir /sys" > $@
 	echo "::sysinit:/abin/mount -t sysfs -o nodev,noexec,nosuid sysfs /sys" >> $@
 	echo "::sysinit:/abin/mkdir /proc" >> $@
 	echo "::sysinit:/abin/mount -t proc -o nodev,noexec,nosuid proc /proc" >> $@
@@ -458,7 +663,24 @@ out/rd/aetc/inittab: out/rd/abin/busybox
 	echo "::ctrlaltdel:/abin/poweroff" >> $@
 #
 	echo '#!/abin/sh' > out/rd/aetc/init.d/rcS
-	echo 'echo "Hello World!"' >> out/rd/aetc/init.d/rcS
+	echo 'for x in $$(/abin/busybox cat /proc/cmdline); do' >> out/rd/aetc/init.d/rcS
+	echo '  case $$x in' >> out/rd/aetc/init.d/rcS
+	echo '  myboot=*)' >> out/rd/aetc/init.d/rcS
+	echo '    BOOT_DEV=$${x#myboot=}' >> out/rd/aetc/init.d/rcS
+	echo '    BOOT_DEV_NAME=/dev/mmcblk$${BOOT_DEV}' >> out/rd/aetc/init.d/rcS
+	echo '    echo "BOOT_DEV_NAME = $${BOOT_DEV_NAME}"' >> out/rd/aetc/init.d/rcS
+	echo '    ;;' >> out/rd/aetc/init.d/rcS
+	echo '  esac' >> out/rd/aetc/init.d/rcS
+	echo 'done' >> out/rd/aetc/init.d/rcS
+	echo 'if [ $${BOOT_DEV} = "0" ]' >> out/rd/aetc/init.d/rcS
+	echo 'then' >> out/rd/aetc/init.d/rcS
+	echo '   BOOT_DEV_TYPE=microSD' >> out/rd/aetc/init.d/rcS
+	echo 'else' >> out/rd/aetc/init.d/rcS
+	echo '   BOOT_DEV_TYPE=eMMC' >> out/rd/aetc/init.d/rcS
+	echo '   /abin/busybox mount /dev/mmcblk$${BOOT_DEV}p1 /amnt/emmc' >> out/rd/aetc/init.d/rcS
+	echo '   /abin/busybox ln -s /amnt/emmc /boot' >> out/rd/aetc/init.d/rcS
+	echo 'fi' >> out/rd/aetc/init.d/rcS
+	echo 'echo "BOOT_DEV_TYPE = $${BOOT_DEV_TYPE}"' >> out/rd/aetc/init.d/rcS
 #	echo 'mkdir /sys' >> out/rd/aetc/init.d/rcS
 #	echo 'mount -t sysfs -o nodev,noexec,nosuid sysfs /sys' >> out/rd/aetc/init.d/rcS
 #	echo 'mkdir /proc' >> out/rd/aetc/init.d/rcS
@@ -478,9 +700,10 @@ out/rd/aetc/inittab: out/rd/abin/busybox
 #	echo '/busybox ln -sf /proc/self/fd/2 /dev/stderr' >> out/rd/aetc/init.d/rcS
 	chmod ugo+x out/rd/aetc/init.d/rcS
 #
-	echo "Busybox OPI5+" > out/rd/aetc/issue
+	echo "MySys_OPI5+" > out/rd/aetc/issue
 #
-	echo 'export PATH="/abin"' > out/rd/aetc/profile
+	echo 'export PATH="/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/abin"' > out/rd/aetc/profile
+#	echo 'echo "profile: Hellow World!"' >> out/rd/aetc/profile
 #
 	echo "/abin/ash" > out/rd/aetc/shells
 	echo "/abin/sh" >> out/rd/aetc/shells
@@ -576,7 +799,7 @@ parts/rkdeveloptool/bld/Makefile: parts/rkdeveloptool/src/cfg/compile
 	cd parts/rkdeveloptool/bld && ../src/configure CXXFLAGS="$(BASE_OPT_FLAGS)"
 
 parts/rkdeveloptool/bld/rkdeveloptool: parts/rkdeveloptool/bld/Makefile
-	cd parts/rkdeveloptool/bld && make $(JOBS) V=1
+	cd parts/rkdeveloptool/bld && make $(JOBS) V=$(VERB)
 
 out/rkdeveloptool: parts/rkdeveloptool/bld/rkdeveloptool
 	mkdir -p out
@@ -619,6 +842,10 @@ write_run: out/mmc.img
 	@read line
 	sudo dd if=out/mmc.img of=`ls /dev/mmcblk*boot0 | cut -c-12 | tr 01 10` bs=1M status=progress && sudo sync
 
+# ============================= LFS
+
+
+
 pkg/binutils-$(BINUTILS_VER).tar.xz:
 	mkdir -p pkg
 	wget -P pkg https://ftp.gnu.org/gnu/binutils/binutils-$(BINUTILS_VER).tar.xz
@@ -634,37 +861,343 @@ pkg/mpc-$(MPC_VER).tar.gz:
 pkg/gcc-$(GCC_VER).tar.xz:
 	mkdir -p pkg
 	wget -P pkg https://ftp.gnu.org/gnu/gcc/gcc-$(GCC_VER)/gcc-$(GCC_VER).tar.xz
+pkg/glibc-$(GLIBC_VER).tar.xz:
+	mkdir -p pkg
+	wget -P pkg https://ftp.gnu.org/gnu/glibc/glibc-$(GLIBC_VER).tar.xz
+pkg/glibc-$(GLIBC_VER)-fhs-1.patch:
+	mkdir -p pkg
+	wget -P pkg http://www.linuxfromscratch.org/patches/lfs/10.0/glibc-$(GLIBC_VER)-fhs-1.patch
+pkg/m4-$(M4_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/m4/m4-$(M4_VER).tar.xz
+pkg/ncurses-$(NCURSES_VER).tar.gz:
+	wget -P pkg http://ftp.gnu.org/gnu/ncurses/ncurses-$(NCURSES_VER).tar.gz
+pkg/bash-$(BASH_VER).tar.gz:
+	wget -P pkg http://ftp.gnu.org/gnu/bash/bash-$(BASH_VER).tar.gz
+pkg/coreutils-$(CORE_UTILS_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/coreutils/coreutils-$(CORE_UTILS_VER).tar.xz
+pkg/diffutils-$(DIFF_UTILS_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/diffutils/diffutils-$(DIFF_UTILS_VER).tar.xz
+pkg/file-$(FILE_VER).tar.gz:
+	wget -P pkg ftp://ftp.astron.com/pub/file/file-$(FILE_VER).tar.gz
+pkg/findutils-$(FIND_UTILS_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/findutils/findutils-$(FIND_UTILS_VER).tar.xz
+pkg/gawk-$(GAWK_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/gawk/gawk-$(GAWK_VER).tar.xz
+pkg/grep-$(GREP_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/grep/grep-$(GREP_VER).tar.xz
+pkg/gzip-$(GZIP_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/gzip/gzip-$(GZIP_VER).tar.xz
+pkg/make-$(MAKE_VER).tar.gz:
+	wget -P pkg http://ftp.gnu.org/gnu/make/make-$(MAKE_VER).tar.gz
+pkg/patch-$(PATCH_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/patch/patch-$(PATCH_VER).tar.xz
+pkg/sed-$(SED_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/sed/sed-$(SED_VER).tar.xz
+pkg/tar-$(TAR_VER).tar.xz:
+	wget -P pkg http://ftp.gnu.org/gnu/tar/tar-$(TAR_VER).tar.xz
+pkg/xz-$(XZ_VER).tar.xz:
+	wget -P pkg https://tukaani.org/xz/xz-$(XZ_VER).tar.xz
 
-parts/host-binutils/binutils-$(BINUTILS_VER)/README: pkg/binutils-$(BINUTILS_VER).tar.xz
-	mkdir -p parts/host-binutils
-	tar -xJf $< -C parts/host-binutils && touch $@
-parts/host-binutils/bld/Makefile: parts/host-binutils/binutils-$(BINUTILS_VER)/README
-	mkdir -p parts/host-binutils/bld
-	cd parts/host-binutils/bld && ../binutils-$(BINUTILS_VER)/configure $(BINUTILS_OPT)
-parts/host-binutils/bld/binutils/addr2line: parts/host-binutils/bld/Makefile
-	cd parts/host-binutils/bld && make $(JOBS) V=$(VERB)
-tools/bin/$(LFS_TGT)-addr2line: parts/host-binutils/bld/binutils/addr2line
-	cd parts/host-binutils/bld && make install
-binutils: tools/bin/$(LFS_TGT)-addr2line
 
-parts/host-gcc/gcc-$(GCC_VER)/README: pkg/gcc-$(GCC_VER).tar.xz
-	mkdir -p parts/host-gcc
-	tar -xJf $< -C parts/host-gcc && touch $@
-parts/host-gcc/gcc-$(GCC_VER)/gmp/README: pkg/gmp-$(GMP_VER).tar.xz parts/host-gcc/gcc-$(GCC_VER)/README
-	tar -xJf $< -C parts/host-gcc/gcc-$(GCC_VER)
-	cd parts/host-gcc/gcc-$(GCC_VER) && mv -v gmp-$(GMP_VER) gmp && touch gmp/README
-parts/host-gcc/gcc-$(GCC_VER)/mpfr/README: pkg/mpfr-$(MPFR_VER).tar.xz parts/host-gcc/gcc-$(GCC_VER)/README
-	tar -xJf $< -C parts/host-gcc/gcc-$(GCC_VER)
-	cd parts/host-gcc/gcc-$(GCC_VER) && mv -v mpfr-$(MPFR_VER) mpfr && touch mpfr/README
-parts/host-gcc/gcc-$(GCC_VER)/mpc/README: pkg/mpc-$(MPC_VER).tar.gz parts/host-gcc/gcc-$(GCC_VER)/README
-	tar -xzf $< -C parts/host-gcc/gcc-$(GCC_VER)
-	cd parts/host-gcc/gcc-$(GCC_VER) && mv -v mpc-$(MPC_VER) mpc && touch mpc/README
-parts/host-gcc/bld/Makefile: parts/host-gcc/gcc-$(GCC_VER)/README parts/host-gcc/gcc-$(GCC_VER)/gmp/README parts/host-gcc/gcc-$(GCC_VER)/mpfr/README parts/host-gcc/gcc-$(GCC_VER)/mpc/README
-	mkdir -p parts/host-gcc/bld
-	cd parts/host-gcc/bld && ../gcc-$(GCC_VER)/configure $(GCC_OPT)
-parts/host-gcc/bld/gcc/cc1: parts/host-gcc/bld/Makefile
-	cd parts/host-gcc/bld && make $(JOBS) V=$(VERB)
-tools/bin/$(LFS_TGT)-gcc: parts/host-gcc/bld/gcc/cc1
-	cd parts/host-gcc/bld && make install
-	cat parts/host-gcc/gcc-$(GCC_VER)/gcc/limitx.h parts/host-gcc/gcc-$(GCC_VER)/gcc/glimits.h parts/host-gcc/gcc-$(GCC_VER)/gcc/limity.h > tools/lib/gcc/$(LFS_TGT)/$(GCC_VER)/install-tools/include/limits.h
-gcc: tools/bin/$(LFS_TGT)-gcc
+parts/host-cross-binutils/binutils-$(BINUTILS_VER)/README: pkg/binutils-$(BINUTILS_VER).tar.xz out/fat/Image
+	mkdir -p parts/host-cross-binutils
+	tar -xJf $< -C parts/host-cross-binutils && touch $@
+parts/host-cross-binutils/bld1-host/Makefile: parts/host-cross-binutils/binutils-$(BINUTILS_VER)/README
+	mkdir -p parts/host-cross-binutils/bld1-host
+	cd parts/host-cross-binutils/bld1-host && ../binutils-$(BINUTILS_VER)/configure $(BINUTILS_OPT)
+parts/host-cross-binutils/bld1-host/binutils/addr2line: parts/host-cross-binutils/bld1-host/Makefile
+	cd parts/host-cross-binutils/bld1-host && make $(JOBS) V=$(VERB)
+$(LFS)/tools/bin/$(LFS_TGT)-addr2line: parts/host-cross-binutils/bld1-host/binutils/addr2line
+	cd parts/host-cross-binutils/bld1-host && make install
+
+#binutils:$(LFS)/tools/bin/$(LFS_TGT)-addr2line
+
+parts/host-cross-gcc/gcc-$(GCC_VER)/README: pkg/gcc-$(GCC_VER).tar.xz $(LFS)/tools/bin/$(LFS_TGT)-addr2line
+	mkdir -p parts/host-cross-gcc
+	tar -xJf $< -C parts/host-cross-gcc && touch $@
+parts/host-cross-gcc/gcc-$(GCC_VER)/gmp/README: pkg/gmp-$(GMP_VER).tar.xz parts/host-cross-gcc/gcc-$(GCC_VER)/README
+	tar -xJf $< -C parts/host-cross-gcc/gcc-$(GCC_VER)
+	cd parts/host-cross-gcc/gcc-$(GCC_VER) && mv -v gmp-$(GMP_VER) gmp && touch gmp/README
+parts/host-cross-gcc/gcc-$(GCC_VER)/mpfr/README: pkg/mpfr-$(MPFR_VER).tar.xz parts/host-cross-gcc/gcc-$(GCC_VER)/README
+	tar -xJf $< -C parts/host-cross-gcc/gcc-$(GCC_VER) 			
+	cd parts/host-cross-gcc/gcc-$(GCC_VER) && mv -v mpfr-$(MPFR_VER) mpfr && touch mpfr/README
+parts/host-cross-gcc/gcc-$(GCC_VER)/mpc/README: pkg/mpc-$(MPC_VER).tar.gz parts/host-cross-gcc/gcc-$(GCC_VER)/README
+	tar -xzf $< -C parts/host-cross-gcc/gcc-$(GCC_VER)
+	cd parts/host-cross-gcc/gcc-$(GCC_VER) && mv -v mpc-$(MPC_VER) mpc && touch mpc/README
+parts/host-cross-gcc/bld1-host/Makefile: parts/host-cross-gcc/gcc-$(GCC_VER)/README parts/host-cross-gcc/gcc-$(GCC_VER)/gmp/README parts/host-cross-gcc/gcc-$(GCC_VER)/mpfr/README parts/host-cross-gcc/gcc-$(GCC_VER)/mpc/README
+	mkdir -p parts/host-cross-gcc/bld1-host
+	cd parts/host-cross-gcc/bld1-host && ../gcc-$(GCC_VER)/configure $(GCC_OPT)
+$(LFS)/tools/bin/$(LFS_TGT)-gcc: parts/host-cross-gcc/bld1-host/Makefile
+	cd parts/host-cross-gcc/bld1-host && make $(JOBS) V=$(VERB) && make install
+	cd parts/host-cross-gcc/bld1-host && cd ../ && cat gcc-$(GCC_VER)/gcc/limitx.h gcc-$(GCC_VER)/gcc/glimits.h gcc-$(GCC_VER)/gcc/limity.h > $(LFS)/tools/lib/gcc/$(LFS_TGT)/$(GCC_VER)/install-tools/include/limits.h
+
+#gcc: $(LFS)/tools/bin/$(LFS_TGT)-gcc
+
+
+$(LFS)/usr/include/asm/ioctl.h: out/rd/kermod/include/asm/ioctl.h
+	mkdir -p $(LFS)/usr/lib
+	cd $(LFS) && ln -fsv usr/lib lib
+	mkdir -p $(LFS)/usr/bin
+	cd $(LFS) && ln -fsv usr/bin bin
+	mkdir -p $(LFS)/usr/sbin
+	cd $(LFS) && ln -fsv usr/sbin sbin
+	mkdir -p $(LFS)/usr/etc
+	cd $(LFS) && ln -fsv usr/etc etc
+	mkdir -p $(LFS)/usr/include
+	cp -far out/rd/kermod/include/* $(LFS)/usr/include
+#$(LFS)/lib/ld-lsb.so.3: /lib/ld-linux-aarch64.so.1
+#	mkdir -p $(LFS)/lib
+#	ln -sfv $< $@
+parts/host-glibc/glibc-$(GLIBC_VER)-fhs-1.patch: pkg/glibc-$(GLIBC_VER)-fhs-1.patch
+	mkdir -p parts/host-glibc
+	cp -far $< $@
+parts/host-glibc/glibc-$(GLIBC_VER)/README: pkg/glibc-$(GLIBC_VER).tar.xz parts/host-glibc/glibc-$(GLIBC_VER)-fhs-1.patch $(LFS)/usr/include/asm/ioctl.h $(LFS)/tools/bin/$(LFS_TGT)-gcc
+	mkdir -p parts/host-glibc
+	tar -xJf $< -C parts/host-glibc && touch $@ && cd parts/host-glibc/glibc-$(GLIBC_VER) && patch -Np1 -i ../glibc-$(GLIBC_VER)-fhs-1.patch
+	sed -i '30 a DIAG_PUSH_NEEDS_COMMENT;' parts/host-glibc/glibc-$(GLIBC_VER)/locale/weight.h
+	sed -i '31 a DIAG_IGNORE_Os_NEEDS_COMMENT (8, "-Wmaybe-uninitialized");' parts/host-glibc/glibc-$(GLIBC_VER)/locale/weight.h
+	sed -i '33 a DIAG_POP_NEEDS_COMMENT;' parts/host-glibc/glibc-$(GLIBC_VER)/locale/weight.h
+parts/host-glibc/host.txt: parts/host-glibc/glibc-$(GLIBC_VER)/README
+	parts/host-glibc/glibc-$(GLIBC_VER)/scripts/config.guess > $@
+parts/host-glibc/bld/Makefile: parts/host-glibc/host.txt
+	mkdir -p parts/host-glibc/bld
+	cd parts/host-glibc/bld && ../glibc-$(GLIBC_VER)/configure --build=`cat ../host.txt` $(GLIBC_OPT) libc_cv_slibdir=/lib
+$(LFS)/lib/ld-$(GLIBC_VER).so: parts/host-glibc/bld/Makefile
+	cd parts/host-glibc/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+	$(LFS)/tools/libexec/gcc/$(LFS_TGT)/$(GCC_VER)/install-tools/mkheaders
+
+#glibc: $(LFS)/lib/ld-$(GLIBC_VER).so
+
+parts/host-cross-gcc/bld_libcpp1/Makefile: $(LFS)/lib/ld-$(GLIBC_VER).so
+	mkdir -p parts/host-cross-gcc/bld_libcpp1
+	cd parts/host-cross-gcc/bld_libcpp1 && ../gcc-$(GCC_VER)/libstdc++-v3/configure --build=`cat ../../host-glibc/host.txt` $(LIBCPP_OPT)
+
+$(LFS)/tools/$(LFS_TGT)/include/c++/$(GCC_VER)/stdlib.h: parts/host-cross-gcc/bld_libcpp1/Makefile
+	cd parts/host-cross-gcc/bld_libcpp1 && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+
+#libcpp: $(LFS)/tools/$(LFS_TGT)/include/c++/$(GCC_VER)/stdlib.h
+
+parts/cross-m4/m4-$(M4_VER)/README: pkg/m4-$(M4_VER).tar.xz $(LFS)/tools/$(LFS_TGT)/include/c++/$(GCC_VER)/stdlib.h
+	mkdir -p parts/cross-m4
+	tar -xJf $< -C parts/cross-m4 && touch $@
+	sed -i 's/IO_ftrylockfile/IO_EOF_SEEN/' parts/cross-m4/m4-$(M4_VER)/lib/*.c
+	echo "#define _IO_IN_BACKUP 0x100" >> parts/cross-m4/m4-$(M4_VER)/lib/stdio-impl.h
+parts/cross-m4/bld/Makefile: parts/cross-m4/m4-$(M4_VER)/README
+	mkdir -p parts/cross-m4/bld
+	cd parts/cross-m4/bld && ../m4-$(M4_VER)/configure --build=`cat ../../host-glibc/host.txt` $(M4_OPT)
+$(LFS)/usr/bin/m4: parts/cross-m4/bld/Makefile
+	cd parts/cross-m4/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+m4: $(LFS)/usr/bin/m4
+
+
+parts/cross-ncurses/ncurses-$(NCURSES_VER)/README: pkg/ncurses-$(NCURSES_VER).tar.gz $(LFS)/usr/bin/m4
+	mkdir -p parts/cross-ncurses
+	tar -xzf $< -C parts/cross-ncurses && touch $@
+	sed -i s/mawk// parts/cross-ncurses/ncurses-$(NCURSES_VER)/configure
+$(LFS)/usr/lib/libncursesw.so.$(NCURSES_VER): parts/cross-ncurses/ncurses-$(NCURSES_VER)/README
+	mkdir -p parts/cross-ncurses/bld
+#	cd parts/cross-ncurses/bld && ../ncurses-$(NCURSES_VER)/configure && make -C include && make -C progs tic && export TIC_PATH=$(LFS)/../parts/cross-ncurses/bld/progs/tic && ../ncurses-$(NCURSES_VER)/configure --build=`cat ../../host-glibc/host.txt` --with-build-cc=`cat ../../host-glibc/host.txt` $(NCURSES_OPT) && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) TIC_PATH=$(LFS)/../parts/cross-ncurses/bld/progs/tic install
+	cd parts/cross-ncurses/bld && ../ncurses-$(NCURSES_VER)/configure && make -C include && make -C progs tic && ../ncurses-$(NCURSES_VER)/configure --build=`cat ../../host-glibc/host.txt` --with-build-cc=`cat ../../host-glibc/host.txt` $(NCURSES_OPT) && make $(JOBS) V=$(VERB) && make LD_LIBRARY_PATH=$(LFS)/../parts/cross-ncurses/bld/lib DESTDIR=$(LFS) TIC_PATH=$(LFS)/../parts/cross-ncurses/bld/progs/tic install
+	echo "INPUT(-lncursesw)" > $(LFS)/usr/lib/libncurses.so
+	cd $(LFS)/lib && ln -sfv libncursesw.so.6 libtinfo.so.6
+#	mv -v $(LFS)/usr/lib/libncursesw.so.6* $(LFS)/lib
+#	cd $(LFS)/usr/lib && ln -sfv ../../lib/libncursesw.so.6 libncursesw.so
+ncu: $(LFS)/usr/lib/libncursesw.so.$(NCURSES_VER)
+
+parts/cross-bash/bash-$(BASH_VER)/README: pkg/bash-$(BASH_VER).tar.gz $(LFS)/usr/lib/libncursesw.so.$(NCURSES_VER)
+	mkdir -p parts/cross-bash
+	tar -xzf $< -C parts/cross-bash && touch $@
+parts/cross-bash/bld/Makefile: parts/cross-bash/bash-$(BASH_VER)/README
+	mkdir -p parts/cross-bash/bld
+	cd parts/cross-bash/bld && ../bash-$(BASH_VER)/configure --build=`cat ../../host-glibc/host.txt` $(BASH_OPT)
+$(LFS)/usr/bin/bash: parts/cross-bash/bld/Makefile
+	cd parts/cross-bash/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+#	mkdir -p $(LFS)/bin
+#	mv $(LFS)/usr/bin/bash $(LFS)/bin
+	cd $(LFS)/usr/bin && ln -sf bash sh
+bash: $(LFS)/usr/bin/bash
+
+parts/cross-coreutils/coreutils-$(CORE_UTILS_VER)/README: pkg/coreutils-$(CORE_UTILS_VER).tar.xz $(LFS)/usr/bin/bash
+	mkdir -p parts/cross-coreutils
+	tar -xJf $< -C parts/cross-coreutils && touch $@
+	sed -i "s/SYS_getdents/SYS_getdents64/" parts/cross-coreutils/coreutils-$(CORE_UTILS_VER)/src/ls.c
+parts/cross-coreutils/bld/Makefile: parts/cross-coreutils/coreutils-$(CORE_UTILS_VER)/README
+	mkdir -p parts/cross-coreutils/bld
+	cd parts/cross-coreutils/bld && ../coreutils-$(CORE_UTILS_VER)/configure --build=`cat ../../host-glibc/host.txt` $(CORE_UTILS_OPT)
+$(LFS)/usr/sbin/chroot: parts/cross-coreutils/bld/Makefile
+	cd parts/cross-coreutils/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+#	mkdir -p $(LFS)/bin
+	mkdir -p $(LFS)/usr/sbin
+#	mv -v $(LFS)/usr/bin/cat $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/chgrp $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/chmod $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/chown $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/cp $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/date $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/dd $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/df $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/echo $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/false $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/ln $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/ls $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/mkdir $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/mknod $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/mv $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/pwd $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/rm $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/rmdir $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/stty $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/sync $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/true $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/uname $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/head $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/nice $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/sleep $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/touch $(LFS)/bin
+	mv -v $(LFS)/usr/bin/chroot $(LFS)/usr/sbin
+	mkdir -pv $(LFS)/usr/share/man/man8
+	mv -v $(LFS)/usr/share/man/man1/chroot.1 $(LFS)/usr/share/man/man8/chroot.8
+	sed -i 's/"1"/"8"/' $(LFS)/usr/share/man/man8/chroot.8
+cor: $(LFS)/usr/sbin/chroot
+
+parts/cross-diffutils/diffutils-$(DIFF_UTILS_VER)/README: pkg/diffutils-$(DIFF_UTILS_VER).tar.xz $(LFS)/usr/sbin/chroot
+	mkdir -p parts/cross-diffutils
+	tar -xJf $< -C parts/cross-diffutils && touch $@
+
+parts/cross-diffutils/bld/Makefile: parts/cross-diffutils/diffutils-$(DIFF_UTILS_VER)/README
+	mkdir -p parts/cross-diffutils/bld
+	cd parts/cross-diffutils/bld && ../diffutils-$(DIFF_UTILS_VER)/configure $(DIFF_UTILS_OPT)
+
+$(LFS)/usr/bin/diff: parts/cross-diffutils/bld/Makefile
+	cd parts/cross-diffutils/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+
+dif: $(LFS)/usr/bin/diff
+
+parts/cross-file/file-$(FILE_VER)/README: pkg/file-$(FILE_VER).tar.gz $(LFS)/usr/bin/diff
+	mkdir -p parts/cross-file
+	tar -xzf $< -C parts/cross-file && touch $@
+
+parts/cross-file/bld/Makefile: parts/cross-file/file-$(FILE_VER)/README
+	mkdir -p parts/cross-file/bld
+	cd parts/cross-file/bld && ../file-$(FILE_VER)/configure $(FILE_OPT)
+
+$(LFS)/usr/bin/file: parts/cross-file/bld/Makefile
+	cd parts/cross-file/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+
+fil: $(LFS)/usr/bin/file
+
+parts/cross-findutils/findutils-$(FIND_UTILS_VER)/README: pkg/findutils-$(FIND_UTILS_VER).tar.xz $(LFS)/usr/bin/file
+	mkdir -p parts/cross-findutils
+	tar -xJf $< -C parts/cross-findutils && touch $@
+parts/cross-findutils/bld/Makefile: parts/cross-findutils/findutils-$(FIND_UTILS_VER)/README
+	mkdir -p parts/cross-findutils/bld
+	cd parts/cross-findutils/bld && ../findutils-$(FIND_UTILS_VER)/configure --build=`cat ../../host-glibc/host.txt` $(FIND_UTILS_OPT)
+$(LFS)/usr/bin/find: parts/cross-findutils/bld/Makefile
+	cd parts/cross-findutils/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+#	mv -v $(LFS)/usr/bin/find $(LFS)/bin
+#	sed -i 's|find:=${BINDIR}|find:=/bin|' $(LFS)/usr/bin/updatedb
+find: $(LFS)/usr/bin/find
+
+parts/cross-gawk/gawk-$(GAWK_VER)/README: pkg/gawk-$(GAWK_VER).tar.xz $(LFS)/usr/bin/find
+	mkdir -p parts/cross-gawk
+	tar -xJf $< -C parts/cross-gawk && touch $@
+	sed -i 's/extras//' parts/cross-gawk/gawk-$(GAWK_VER)/Makefile.in
+parts/cross-gawk/bld/Makefile: parts/cross-gawk/gawk-$(GAWK_VER)/README
+	mkdir -p parts/cross-gawk/bld
+	cd parts/cross-gawk/bld && ../gawk-$(GAWK_VER)/configure --build=`cat ../../host-glibc/host.txt` $(GAWK_OPT)
+$(LFS)/usr/bin/gawk: parts/cross-gawk/bld/Makefile
+	cd parts/cross-gawk/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+gawk: $(LFS)/usr/bin/gawk
+
+parts/cross-grep/grep-$(GREP_VER)/README: pkg/grep-$(GREP_VER).tar.xz $(LFS)/usr/bin/gawk
+	mkdir -p parts/cross-grep
+	tar -xJf $< -C parts/cross-grep && touch $@
+parts/cross-grep/bld/Makefile: parts/cross-grep/grep-$(GREP_VER)/README
+	mkdir -p parts/cross-grep/bld
+	cd parts/cross-grep/bld && ../grep-$(GREP_VER)/configure $(GREP_OPT)
+$(LFS)/usr/bin/grep: parts/cross-grep/bld/Makefile
+	cd parts/cross-grep/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+grep: $(LFS)/usr/bin/grep
+
+parts/cross-gzip/gzip-$(GZIP_VER)/README: pkg/gzip-$(GZIP_VER).tar.xz $(LFS)/usr/bin/grep
+	mkdir -p parts/cross-gzip
+	tar -xJf $< -C parts/cross-gzip && touch $@
+parts/cross-gzip/bld/Makefile: parts/cross-gzip/gzip-$(GZIP_VER)/README
+	mkdir -p parts/cross-gzip/bld
+	cd parts/cross-gzip/bld && ../gzip-$(GZIP_VER)/configure $(GZIP_OPT)
+$(LFS)/usr/bin/gzip: parts/cross-gzip/bld/Makefile
+	cd parts/cross-gzip/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+#	mv -v $(LFS)/usr/bin/gzip $(LFS)/bin
+gzip: $(LFS)/usr/bin/gzip
+
+parts/cross-make/make-$(MAKE_VER)/README: pkg/make-$(MAKE_VER).tar.gz $(LFS)/usr/bin/gzip
+	mkdir -p parts/cross-make
+	tar -xzf $< -C parts/cross-make && touch $@
+parts/cross-make/bld/Makefile: parts/cross-make/make-$(MAKE_VER)/README
+	mkdir -p parts/cross-make/bld
+	cd parts/cross-make/bld && ../make-$(MAKE_VER)/configure --build=`cat ../../host-glibc/host.txt` $(MAKE_OPT)
+$(LFS)/usr/bin/make: parts/cross-make/bld/Makefile
+	cd parts/cross-make/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+mak: $(LFS)/usr/bin/make
+
+parts/cross-patch/patch-$(PATCH_VER)/README: pkg/patch-$(PATCH_VER).tar.xz $(LFS)/usr/bin/make
+	mkdir -p parts/cross-patch
+	tar -xJf $< -C parts/cross-patch && touch $@
+parts/cross-patch/bld/Makefile: parts/cross-patch/patch-$(PATCH_VER)/README
+	mkdir -p parts/cross-patch/bld
+	cd parts/cross-patch/bld && ../patch-$(PATCH_VER)/configure --build=`cat ../../host-glibc/host.txt` $(PATCH_OPT)
+$(LFS)/usr/bin/patch: parts/cross-patch/bld/Makefile
+	cd parts/cross-patch/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+pat: $(LFS)/usr/bin/patch
+
+parts/cross-sed/sed-$(SED_VER)/README: pkg/sed-$(SED_VER).tar.xz $(LFS)/usr/bin/patch
+	mkdir -p parts/cross-sed
+	tar -xJf $< -C parts/cross-sed && touch $@
+parts/cross-sed/bld/Makefile: parts/cross-sed/sed-$(SED_VER)/README
+	mkdir -p parts/cross-sed/bld
+	cd parts/cross-sed/bld && ../sed-$(SED_VER)/configure $(SED_OPT)
+$(LFS)/usr/bin/sed: parts/cross-sed/bld/Makefile
+	cd parts/cross-sed/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+sed: $(LFS)/usr/bin/sed
+
+parts/cross-tar/tar-$(TAR_VER)/README: pkg/tar-$(TAR_VER).tar.xz $(LFS)/usr/bin/sed
+	mkdir -p parts/cross-tar
+	tar -xJf $< -C parts/cross-tar && touch $@
+parts/cross-tar/bld/Makefile: parts/cross-tar/tar-$(TAR_VER)/README
+	mkdir -p parts/cross-tar/bld
+	cd parts/cross-tar/bld && ../tar-$(TAR_VER)/configure --build=`cat ../../host-glibc/host.txt` $(TAR_OPT)
+$(LFS)/usr/bin/tar: parts/cross-tar/bld/Makefile
+	cd parts/cross-tar/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+tar: $(LFS)/usr/bin/tar
+
+parts/cross-xz/xz-$(XZ_VER)/README: pkg/xz-$(XZ_VER).tar.xz $(LFS)/usr/bin/tar
+	mkdir -p parts/cross-xz
+	tar -xJf $< -C parts/cross-xz && touch $@
+parts/cross-xz/bld/Makefile: parts/cross-xz/xz-$(XZ_VER)/README
+	mkdir -p parts/cross-xz/bld
+	cd parts/cross-xz/bld && ../xz-$(XZ_VER)/configure --build=`cat ../../host-glibc/host.txt` $(XZ_OPT)
+$(LFS)/usr/bin/xz: parts/cross-xz/bld/Makefile
+	cd parts/cross-xz/bld && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+#	mv -v $(LFS)/usr/bin/lzma $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/unlzma $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/lzcat $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/xz $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/unxz $(LFS)/bin
+#	mv -v $(LFS)/usr/bin/xzcat $(LFS)/bin
+#	mv -v $(LFS)/usr/lib/liblzma.so.* $(LFS)/lib
+#	cd $(LFS)/usr/lib && ln -sfv ../../lib/liblzma.so.$(XZ_VER) liblzma.so
+xz: $(LFS)/usr/bin/xz
+
+parts/host-cross-binutils/bld2-cross/Makefile: $(LFS)/usr/bin/xz
+	mkdir -p parts/host-cross-binutils/bld2-cross
+	cd parts/host-cross-binutils/bld2-cross && CC=$(LFS)/tools/bin/$(LFS_TGT)-gcc AR=$(LFS)/tools/bin/$(LFS_TGT)-ar RANLIB=$(LFS)/tools/bin/$(LFS_TGT)-ranlib ../binutils-$(BINUTILS_VER)/configure --build=`cat ../../host-glibc/host.txt` $(BINUTILS_OPT2)
+$(LFS)/usr/$(LFS_TGT)/bin/ar: parts/host-cross-binutils/bld2-cross/Makefile
+	cd parts/host-cross-binutils/bld2-cross && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
+bin2: $(LFS)/usr/$(LFS_TGT)/bin/ar
+
+parts/host-cross-gcc/bld2-cross/Makefile: $(LFS)/usr/$(LFS_TGT)/bin/ar
+	mkdir -p parts/host-cross-gcc/bld2-cross
+	cd parts/host-cross-gcc/bld2-cross && mkdir -pv $(LFS_TGT)/libgcc && cd $(LFS_TGT)/libgcc && ln -sfv ../../../gcc-$(GCC_VER)/libgcc/gthr-posix.h gthr-posix.h
+	cd parts/host-cross-gcc/bld2-cross && CC=$(LFS)/tools/bin/$(LFS_TGT)-gcc AR=$(LFS)/tools/bin/$(LFS_TGT)-ar RANLIB=$(LFS)/tools/bin/$(LFS_TGT)-ranlib ../gcc-$(GCC_VER)/configure --build=`cat ../../host-glibc/host.txt` $(GCC_OPT2)
+gcc2: parts/host-cross-gcc/bld2-cross/Makefile
+	cd parts/host-cross-gcc/bld2-cross && make $(JOBS) V=$(VERB) && make DESTDIR=$(LFS) install
